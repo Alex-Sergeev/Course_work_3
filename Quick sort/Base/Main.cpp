@@ -62,7 +62,7 @@ void quickSortPar(int* arr, int startInd, int endInd)
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	int size = 100000000;
+	int size = 100;
 	int* arr = new int[size];
 	genRandArray(arr, size);
 	int* parallelArr = new int[size];

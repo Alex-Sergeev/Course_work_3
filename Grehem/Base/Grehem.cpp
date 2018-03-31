@@ -3,6 +3,7 @@
 #include <random>
 #include <chrono>
 #include <math.h>
+#include <stack>
 
 struct dot
 {
@@ -37,7 +38,7 @@ void genRandArray(dot* arr, int size)
 {
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(-1000000, 1000000);
+	std::uniform_int_distribution<> dis(0, 10);
 	for (int i = 0; i < size; i++)
 	{
 		arr[i].x = dis(gen);
@@ -86,9 +87,9 @@ void quickSortPar(dot* arr, int startInd, int endInd)
 #pragma omp parallel sections num_threads(2)
 		{
 #pragma omp section
-			quickSort(arr, startInd, middleInd);
+			quickSortPar(arr, startInd, middleInd);
 #pragma omp section
-			quickSort(arr, middleInd + 1, endInd);
+			quickSortPar(arr, middleInd + 1, endInd);
 		}
 	}
 }
@@ -106,8 +107,8 @@ void quickSortSearchMin(dot* arr, int startInd, int endInd)
 				std::swap(arr[middleInd], arr[i]);
 			}
 		std::swap(arr[startInd], arr[middleInd]);
-		quickSort(arr, startInd, middleInd);
-		quickSort(arr, middleInd + 1, endInd);
+		quickSortSearchMin(arr, startInd, middleInd);
+		quickSortSearchMin(arr, middleInd + 1, endInd);
 	}
 }
 
@@ -127,68 +128,12 @@ void quickSortSearchMinPar(dot* arr, int startInd, int endInd)
 #pragma omp parallel sections num_threads(2)
 		{
 #pragma omp section
-			quickSort(arr, startInd, middleInd);
+			quickSortSearchMinPar(arr, startInd, middleInd);
 #pragma omp section
-			quickSort(arr, middleInd + 1, endInd);
+			quickSortSearchMinPar(arr, middleInd + 1, endInd);
 		}
 	}
 }
-
-class stack
-{
-	int size;
-	int maxSize;
-	dot* Array;
-public:
-	stack(int inSize)
-	{
-		size = 0;
-		maxSize = inSize;
-		Array = new dot[maxSize];
-	}
-
-	~stack()
-	{
-		delete[] Array;
-	}
-	
-	void push(dot element)
-	{
-		if (size + 1 == maxSize)
-		{
-			dot* tmpArr = Array;
-			Array = new dot[maxSize * 2];
-			copy(tmpArr, Array, maxSize);
-			maxSize = maxSize * 2;
-			delete[] tmpArr;
-		}
-		Array[size] = element;
-		size++;
-	}
-
-	dot get()
-	{
-		return Array[size - 1];
-	}
-
-	dot pop()
-	{
-		size--;
-		return Array[size];
-	}
-
-	int getSize()
-	{
-		return size;
-	}
-
-	dot* getArray()
-	{
-		dot* retArray = new dot[size];
-		copy(Array, retArray, size);
-		return retArray;
-	}
-};
 
 void searchMinElement(dot* dotArray, int size)
 {
@@ -201,7 +146,7 @@ void searchMinElementPar(dot* dotArray, int size)
 }
 
 
- std::pair<dot*, int> grehemMethod(dot* dotArray, int size)
+std::pair<std::deque<dot>, int> grehemMethod(dot* dotArray, int size)
 {
 	searchMinElement(dotArray, size - 1);
 	dot move = dotArray[0];
@@ -209,7 +154,7 @@ void searchMinElementPar(dot* dotArray, int size)
 		dotArray[i] = dotArray[i] - move;
 	quickSort(dotArray, 1, size - 1);
 	dotArray[size - 1] = dotArray[0];
-	stack dotStack(size / 2);
+	std::stack<dot> dotStack;
 	dot dotY, dotX;
 	dotStack.push(dotArray[0]);
 	dotStack.push(dotArray[1]);
@@ -217,10 +162,11 @@ void searchMinElementPar(dot* dotArray, int size)
 	{
 		while (true)
 		{
-			if (dotStack.getSize() > 1)
+			if (dotStack.size() > 1)
 			{
-				dotY = dotStack.pop();
-				dotX = dotStack.get();
+				dotY = dotStack.top();
+				dotStack.pop();
+				dotX = dotStack.top();
 				if ((dotArray[i].x*(dotX.y - dotY.y) + dotArray[i].y*(dotY.x - dotX.x) + dotX.x*dotY.y - dotX.y*dotY.x) > 0)
 				{
 					dotStack.push(dotY);
@@ -229,7 +175,7 @@ void searchMinElementPar(dot* dotArray, int size)
 				}
 				else
 				{
-					if (dotStack.getSize() == 1)
+					if (dotStack.size() == 1)
 					{
 						dotStack.push(dotArray[i]);
 						break;
@@ -238,15 +184,15 @@ void searchMinElementPar(dot* dotArray, int size)
 			}
 		}
 	}
-	dot* resultArray = dotStack.getArray();
-	for (auto i = 0; i < dotStack.getSize(); i++)
+	std::deque<dot> resultArray = dotStack._Get_container();
+	for (auto i = 0; i < resultArray.size(); i++)
 	{
 		resultArray[i] = resultArray[i] + move;
 	}
-	return std::make_pair(resultArray, dotStack.getSize());
+	return std::make_pair(resultArray, resultArray.size());
 }
 
- std::pair<dot*, int> grehemMethodPar(dot* dotArray, int size)
+std::pair<std::deque<dot>, int> grehemMethodPar(dot* dotArray, int size)
  {
 	 searchMinElementPar(dotArray, size - 1);
 	 dot move = dotArray[0];
@@ -255,7 +201,7 @@ void searchMinElementPar(dot* dotArray, int size)
 			 dotArray[i] = dotArray[i] - move;
 	 quickSortPar(dotArray, 1, size - 1);
 	 dotArray[size - 1] = dotArray[0];
-	 stack dotStack(size / 2);
+	 std::stack<dot> dotStack;
 	 dot dotY, dotX;
 	 dotStack.push(dotArray[0]);
 	 dotStack.push(dotArray[1]);
@@ -263,10 +209,11 @@ void searchMinElementPar(dot* dotArray, int size)
 	 {
 		 while (true)
 		 {
-			 if (dotStack.getSize() > 1)
+			 if (dotStack.size() > 1)
 			 {
-				 dotY = dotStack.pop();
-				 dotX = dotStack.get();
+				 dotY = dotStack.top();
+				 dotStack.pop();
+				 dotX = dotStack.top();
 				 if ((dotArray[i].x*(dotX.y - dotY.y) + dotArray[i].y*(dotY.x - dotX.x) + dotX.x*dotY.y - dotX.y*dotY.x) > 0)
 				 {
 					 dotStack.push(dotY);
@@ -275,7 +222,7 @@ void searchMinElementPar(dot* dotArray, int size)
 				 }
 				 else
 				 {
-					 if (dotStack.getSize() == 1)
+					 if (dotStack.size() == 1)
 					 {
 						 dotStack.push(dotArray[i]);
 						 break;
@@ -284,25 +231,36 @@ void searchMinElementPar(dot* dotArray, int size)
 			 }
 		 }
 	 }
-	 dot* resultArray = dotStack.getArray();
+	 std::deque<dot> resultArray = dotStack._Get_container();
 #pragma omp parallel for
-		 for (auto i = 0; i < dotStack.getSize(); i++)
+		 for (auto i = 0; i < resultArray.size(); i++)
 			 resultArray[i] = resultArray[i] + move;
-	 return std::make_pair(resultArray, dotStack.getSize());
+	 return std::make_pair(resultArray, resultArray.size());
  }
 
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	int size = 100000000;
+	int size = 10;
 	dot* arr = new dot[size + 1];
 	genRandArray(arr, size);
+
+	for (int i = 0; i < size; i++)
+	{
+		std::cout << arr[i].x << " " << arr[i].y << std::endl;
+	}
+
 	dot* parallelArr = new dot[size + 1];
 	copy(arr, parallelArr, size);
 	auto start = std::chrono::high_resolution_clock::now();
-	std::pair<dot*,int> answer = grehemMethod(arr, size + 1);
+	std::pair<std::deque<dot>, int> answer = grehemMethod(arr, size + 1);
 	auto end = std::chrono::high_resolution_clock::now();
 	std::cout << " Время выполнения " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " (микросекунды)" << std::endl;
+
+	for (int i = 0; i < answer.second; i++)
+	{
+		std::cout << answer.first[i].x << " " << answer.first[i].y << std::endl;
+	}
 	
 	auto startPar = std::chrono::high_resolution_clock::now();
 	answer = grehemMethodPar(parallelArr, size + 1);
