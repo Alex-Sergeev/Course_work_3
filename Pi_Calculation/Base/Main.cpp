@@ -1,4 +1,4 @@
-#include <chrono>
+п»ї#include <chrono>
 #include <omp.h>
 #include <iostream>
 #include <stack>
@@ -43,26 +43,13 @@ void thread_calculation(int thread_num,const double& dx, int startPoint, int end
 	}
 }
 
-double calculate_PI_cpp_thread(const int& numPoints, int numThreads)
+double calculate_PI_cpp_thread(std::pair<int, int>* ind_array, std::thread* threadArr, const int& numPoints, int numThreads)
 {
 	double result = 0;
 	double dx = 1.0 / numPoints;
-	std::pair<int, int>* ind_array = new std::pair<int, int>[numThreads];
-	std::div_t portion = div(numPoints, numThreads); 
-	ind_array[0].first = 0;
-	ind_array[0].second = portion.quot;
-	if (portion.rem > 0)
-		ind_array[0].second++;
-	for (int i = 1; i < numThreads; i++)
-	{
-		ind_array[i].first = ind_array[i - 1].second;
-		ind_array[i].second = ind_array[i].first + portion.quot;
-		if (portion.rem > i)
-			ind_array[i].second++;
-	}//закончено распределение индексов
 
-	double* resArr = new double[numThreads];
-	std::thread* threadArr = new std::thread[numThreads - 1];
+	double resArr[64];
+
 	for (int i = 1; i < numThreads; i++)
 	{
 		threadArr[i - 1] = std::thread(thread_calculation, i, dx, ind_array[i].first, ind_array[i].second, resArr);
@@ -84,29 +71,49 @@ int main()
 	setlocale(LC_ALL, "Russian");
 	double pi = 3.1415926535897932384626433;
 	int numPoints;
-	std::cout << "Введите количество точек разбиения" << std::endl;
+	int numThreads = 8;
+	std::cout << "Р’РІРµРґРёС‚Рµ РєРѕР»РёС‡РµСЃС‚РІРѕ С‚РѕС‡РµРє СЂР°Р·Р±РёРµРЅРёСЏ" << std::endl;
 	std::cin >> numPoints;
 
 	auto start = std::chrono::high_resolution_clock::now();
 	double answer = calculate_PI(numPoints);
 	auto end = std::chrono::high_resolution_clock::now();
-	std::cout << " Время выполнения " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " (микросекунды)" << std::endl;
-	std::cout << "Полученный ответ: " << answer << std::endl;
-	std::cout << "Погрешность: " << abs(pi - answer) << std::endl;
+	std::cout << " Р’СЂРµРјСЏ РІС‹РїРѕР»РЅРµРЅРёСЏ " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " (РјРёРєСЂРѕСЃРµРєСѓРЅРґС‹)" << std::endl;
+	std::cout << "РџРѕР»СѓС‡РµРЅРЅС‹Р№ РѕС‚РІРµС‚: " << answer << std::endl;
+	std::cout << "РџРѕРіСЂРµС€РЅРѕСЃС‚СЊ: " << abs(pi - answer) << std::endl;
 
+	omp_set_num_threads(numThreads);
 	auto startParOMP = std::chrono::high_resolution_clock::now();
 	double answerParOMP = calculate_PI_par_OMP(numPoints);
 	auto endParOMP = std::chrono::high_resolution_clock::now();
-	std::cout << " Время выполнения " << std::chrono::duration_cast<std::chrono::microseconds>(endParOMP - startParOMP).count() << " (микросекунды)" << std::endl;
-	std::cout << "Полученный ответ: " << answerParOMP << std::endl;
-	std::cout << "Погрешность: " << abs(pi - answerParOMP) << std::endl;
+	std::cout << " Р’СЂРµРјСЏ РІС‹РїРѕР»РЅРµРЅРёСЏ " << std::chrono::duration_cast<std::chrono::microseconds>(endParOMP - startParOMP).count() << " (РјРёРєСЂРѕСЃРµРєСѓРЅРґС‹)" << std::endl;
+	std::cout << "РџРѕР»СѓС‡РµРЅРЅС‹Р№ РѕС‚РІРµС‚: " << answerParOMP << std::endl;
+	std::cout << "РџРѕРіСЂРµС€РЅРѕСЃС‚СЊ: " << abs(pi - answerParOMP) << std::endl;
+
+	//Cpp_threads
+	std::pair<int, int>* ind_array = new std::pair<int, int>[numThreads]; // РњР°СЃСЃРёРІ РёРЅРґРµРєСЃРѕРІ
+	std::div_t portion = div(numPoints, numThreads);
+	ind_array[0].first = 0;
+	ind_array[0].second = portion.quot;
+	if (portion.rem > 0)
+		ind_array[0].second++;
+	for (int i = 1; i < numThreads; i++)
+	{
+		ind_array[i].first = ind_array[i - 1].second;
+		ind_array[i].second = ind_array[i].first + portion.quot;
+		if (portion.rem > i)
+			ind_array[i].second++;
+	}//Р·Р°РєРѕРЅС‡РµРЅРѕ СЂР°СЃРїСЂРµРґРµР»РµРЅРёРµ РёРЅРґРµРєСЃРѕРІ
+
+	std::thread* threadArr = new std::thread[numThreads - 1];           //РЎРѕР·РґР°РЅРёРµ РїРѕС‚РѕРєРѕРІ
 
 	auto startParCppPThr = std::chrono::high_resolution_clock::now();
-	double answerCppPThr = calculate_PI_cpp_thread(numPoints, 8);
+	double answerCppPThr = calculate_PI_cpp_thread(ind_array, threadArr, numPoints, numThreads);
 	auto endParCppPThr = std::chrono::high_resolution_clock::now();
-	std::cout << " Время выполнения " << std::chrono::duration_cast<std::chrono::microseconds>(endParCppPThr - startParCppPThr).count() << " (микросекунды)" << std::endl;
-	std::cout << "Полученный ответ: " << answerCppPThr << std::endl;
-	std::cout << "Погрешность: " << abs(pi - answerCppPThr) << std::endl;
+
+	std::cout << " Р’СЂРµРјСЏ РІС‹РїРѕР»РЅРµРЅРёСЏ " << std::chrono::duration_cast<std::chrono::microseconds>(endParCppPThr - startParCppPThr).count() << " (РјРёРєСЂРѕСЃРµРєСѓРЅРґС‹)" << std::endl;
+	std::cout << "РџРѕР»СѓС‡РµРЅРЅС‹Р№ РѕС‚РІРµС‚: " << answerCppPThr << std::endl;
+	std::cout << "РџРѕРіСЂРµС€РЅРѕСЃС‚СЊ: " << abs(pi - answerCppPThr) << std::endl;
 
 	return 0;
 }
