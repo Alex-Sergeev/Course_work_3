@@ -1,4 +1,4 @@
-#include <omp.h>
+ï»¿#include <omp.h>
 #include <iostream>
 #include <random>
 #include <chrono>
@@ -26,7 +26,7 @@ void genRandArray(dot* arr, int size)
 int main()
 {
 	setlocale(LC_ALL, "Russian");
-	int size = 1000000;
+	int size = 10000000;
 	int numThreads = 8;
 	dot* arr = new dot[size + 1];
 	genRandArray(arr, size);
@@ -39,31 +39,32 @@ int main()
 	auto start = std::chrono::high_resolution_clock::now();
 	std::pair<std::deque<dot>, int> answer = grehemMethod(arr, size + 1);
 	auto end = std::chrono::high_resolution_clock::now();
-	std::cout << " Âðåìÿ âûïîëíåíèÿ " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " (ìèêðîñåêóíäû)" << std::endl;
+	std::cout << " Ð’Ñ€ÐµÐ¼Ñ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÐµÐ½Ð¸Ñ " << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " (Ð¼Ð¸ÐºÑ€Ð¾ÑÐµÐºÑƒÐ½Ð´Ñ‹)" << std::endl;
 	
 
 	auto startPar = std::chrono::high_resolution_clock::now();
-	std::pair<std::deque<dot>, int> answer_OpenMP = grehemMethodOpenMP(parallelArr, size + 1);
+	omp_set_num_threads(numThreads);
+	std::pair<std::deque<dot>, int> answer_OpenMP = grehemMethodOpenMP(parallelArr, size + 1, numThreads);
 	auto endPar = std::chrono::high_resolution_clock::now();
-	std::cout << " Âðåìÿ âûïîëíåíèÿ " << std::chrono::duration_cast<std::chrono::microseconds>(endPar - startPar).count() << " (ìèêðîñåêóíäû)" << std::endl;
+	std::cout << " Ð’Ñ€ÐµÐ¼Ñ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÐµÐ½Ð¸Ñ " << std::chrono::duration_cast<std::chrono::microseconds>(endPar - startPar).count() << " (Ð¼Ð¸ÐºÑ€Ð¾ÑÐµÐºÑƒÐ½Ð´Ñ‹)" << std::endl;
 
 
 	auto startPar_cpp = std::chrono::high_resolution_clock::now();
 	std::pair<std::deque<dot>, int> answer_cpp_thread = grehemMethodCppThread(parallelCppThread, size + 1, numThreads);
 	auto endPar_cpp = std::chrono::high_resolution_clock::now();
-	std::cout << " Âðåìÿ âûïîëíåíèÿ " << std::chrono::duration_cast<std::chrono::microseconds>(endPar_cpp - startPar_cpp).count() << " (ìèêðîñåêóíäû)" << std::endl;
+	std::cout << " Ð’Ñ€ÐµÐ¼Ñ Ð²Ñ‹Ð¿Ð¾Ð»Ð½ÐµÐ½Ð¸Ñ " << std::chrono::duration_cast<std::chrono::microseconds>(endPar_cpp - startPar_cpp).count() << " (Ð¼Ð¸ÐºÑ€Ð¾ÑÐµÐºÑƒÐ½Ð´Ñ‹)" << std::endl;
 
 	if (answer.second != answer_OpenMP.second)
-		std::cout << "Ïàðàëëåëüíûé ðåçóëüòàò OpenMp íåâåðåí: êîëè÷åñòâî òî÷åê â âûïóêëûõ îáîëî÷êàõ íå ñîâïàäàþò" << std::endl;
+		std::cout << "ÐŸÐ°Ñ€Ð°Ð»Ð»ÐµÐ»ÑŒÐ½Ñ‹Ð¹ Ñ€ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ OpenMp Ð½ÐµÐ²ÐµÑ€ÐµÐ½: ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ‚Ð¾Ñ‡ÐµÐº Ð² Ð²Ñ‹Ð¿ÑƒÐºÐ»Ñ‹Ñ… Ð¾Ð±Ð¾Ð»Ð¾Ñ‡ÐºÐ°Ñ… Ð½Ðµ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑŽÑ‚" << std::endl;
 
 	if (answer.second != answer_cpp_thread.second)
-		std::cout << "Ïàðàëëåëüíûé ðåçóëüòàò cpp_thread íåâåðåí: êîëè÷åñòâî òî÷åê â âûïóêëûõ îáîëî÷êàõ íå ñîâïàäàþò" << std::endl;
+		std::cout << "ÐŸÐ°Ñ€Ð°Ð»Ð»ÐµÐ»ÑŒÐ½Ñ‹Ð¹ Ñ€ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ cpp_thread Ð½ÐµÐ²ÐµÑ€ÐµÐ½: ÐºÐ¾Ð»Ð¸Ñ‡ÐµÑÑ‚Ð²Ð¾ Ñ‚Ð¾Ñ‡ÐµÐº Ð² Ð²Ñ‹Ð¿ÑƒÐºÐ»Ñ‹Ñ… Ð¾Ð±Ð¾Ð»Ð¾Ñ‡ÐºÐ°Ñ… Ð½Ðµ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑŽÑ‚" << std::endl;
 
 	for (int i = 0; i < answer.second; i++)
 	{
 		if (answer.first[i] != answer_OpenMP.first[i])
 		{
-			std::cout << "Ïàðàëëåëüíûé ðåçóëüòàò OpenMp íåâåðåí: âûïóêëûå îáîë÷êè íå ñîâïàäàþò" << std::endl;
+			std::cout << "ÐŸÐ°Ñ€Ð°Ð»Ð»ÐµÐ»ÑŒÐ½Ñ‹Ð¹ Ñ€ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ OpenMp Ð½ÐµÐ²ÐµÑ€ÐµÐ½: Ð²Ñ‹Ð¿ÑƒÐºÐ»Ñ‹Ðµ Ð¾Ð±Ð¾Ð»Ñ‡ÐºÐ¸ Ð½Ðµ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑŽÑ‚" << std::endl;
 			return 1;
 		}
 	}
@@ -72,11 +73,11 @@ int main()
 	{
 		if (answer.first[i] != answer_cpp_thread.first[i])
 		{
-			std::cout << "Ïàðàëëåëüíûé ðåçóëüòàò cpp_thread íåâåðåí: âûïóêëûå îáîë÷êè íå ñîâïàäàþò" << std::endl;
+			std::cout << "ÐŸÐ°Ñ€Ð°Ð»Ð»ÐµÐ»ÑŒÐ½Ñ‹Ð¹ Ñ€ÐµÐ·ÑƒÐ»ÑŒÑ‚Ð°Ñ‚ cpp_thread Ð½ÐµÐ²ÐµÑ€ÐµÐ½: Ð²Ñ‹Ð¿ÑƒÐºÐ»Ñ‹Ðµ Ð¾Ð±Ð¾Ð»Ñ‡ÐºÐ¸ Ð½Ðµ ÑÐ¾Ð²Ð¿Ð°Ð´Ð°ÑŽÑ‚" << std::endl;
 			return 1;
 		}
 	}
 
-	std::cout << "Âûïóêëûå îáîëî÷êè ñîâïàëè" << std::endl;
+	std::cout << "Ð’Ñ‹Ð¿ÑƒÐºÐ»Ñ‹Ðµ Ð¾Ð±Ð¾Ð»Ð¾Ñ‡ÐºÐ¸ ÑÐ¾Ð²Ð¿Ð°Ð»Ð¸" << std::endl;
 	return 0;
 }

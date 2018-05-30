@@ -1,18 +1,1 @@
-﻿  Grehem.cpp
-D:\VS2017\VC\Tools\MSVC\14.11.25503\include\utility(216): warning C4267: инициализация: преобразование из "size_t" в "int"; возможна потеря данных
-  Grehem.cpp(192): note: выполняется компиляция ссылки на экземпляр шаблон функции "std::pair<std::deque<dot,std::allocator<_Ty>>,int>::pair<std::deque<_Ty,std::allocator<_Ty>>,unsigned __int64,void,0>(std::pair<std::deque<_Ty,std::allocator<_Ty>>,unsigned __int64> &&) noexcept(false)"
-          with
-          [
-              _Ty=dot
-          ]
-  Grehem.cpp(192): note: выполняется компиляция ссылки на экземпляр шаблон функции "std::pair<std::deque<dot,std::allocator<_Ty>>,int>::pair<std::deque<_Ty,std::allocator<_Ty>>,unsigned __int64,void,0>(std::pair<std::deque<_Ty,std::allocator<_Ty>>,unsigned __int64> &&) noexcept(false)"
-          with
-          [
-              _Ty=dot
-          ]
-  Создание кода
-  9 of 247 functions ( 3.6%) were compiled, the rest were copied from previous compilation.
-    2 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
-  Создание кода завершено
-  Base.vcxproj -> C:\Users\Alex\Documents\GitHub\Course_work_3\Grehem\x64\Release\Base.exe
+﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.Cpp.Platform.targets(57,5): error MSB8020: The build tools for v141 (Platform Toolset = 'v141') cannot be found. To build using the v141 build tools, please install v141 build tools.  Alternatively, you may upgrade to the current Visual Studio tools by selecting the Project menu or right-click the solution, and then selecting "Retarget solution".

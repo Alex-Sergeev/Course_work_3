@@ -1,4 +1,4 @@
-#include <stack>
+﻿#include <stack>
 #include <omp.h>
 #include "Dot.h"
 #include <thread>
@@ -125,29 +125,49 @@ void quickSort(dot* arr, int startInd, int endInd)
 	}
 }
 
-void quickSortPar(dot* arr, int startInd, int endInd)
+void sortParallelOpenMP(dot* arr, int startInd, int endInd, int numThreads)
 {
-	if (startInd < endInd)
+	if (endInd - startInd < numThreads * 2) //Если размер массива меньше двойного кол-ва потоков выполняется сортировка всего массива в одном потоке
 	{
-		dot pivot = arr[startInd];
-		int middleInd = startInd;
-		for (auto i = startInd + 1; i < endInd; i++)
-			if (arr[i] < pivot)
-			{
-				middleInd++;
-				std::swap(arr[middleInd], arr[i]);
-			}
-		std::swap(arr[startInd], arr[middleInd]);
-#pragma omp parallel sections num_threads(2)
+		quickSort(arr, startInd, endInd);
+		return;
+	}
+	std::pair<int, int>* ind_array = new std::pair<int, int>[numThreads];
+	std::div_t portion = div((endInd - startInd), numThreads); // size / num_threads
+	ind_array[0].first = startInd;
+	ind_array[0].second = ind_array[0].first + portion.quot;
+	if (portion.rem > 0)
+		ind_array[0].second++;
+	for (int i = 1; i < numThreads; i++)
+	{
+		ind_array[i].first = ind_array[i - 1].second;
+		ind_array[i].second = ind_array[i].first + portion.quot;
+		if (portion.rem > i)
+			ind_array[i].second++;
+	}//закончено распределение индексов
+
+	int steps_amount = std::ceil(log2(numThreads)); // расчёт необходимого числа шагов в цикле слияний массивов 
+
+#pragma omp parallel
+	{
+		int thread_num = omp_get_thread_num();
+		quickSort(arr, ind_array[thread_num].first, ind_array[thread_num].second);
+#pragma omp barrier
+		for (int i = 0; i < steps_amount; i++)
 		{
-#pragma omp section
-			quickSortPar(arr, startInd, middleInd);
-#pragma omp section
-			quickSortPar(arr, middleInd + 1, endInd);
+			if (thread_num % (int)(pow(2, i + 1)) == 0) //Если поток ведущий - сделать слияние с "соседним" потоком
+			{
+				if (thread_num + (int)pow(2, i) < numThreads) // Если поток с которым происходит слияние существует
+				{
+					merge(thread_num, thread_num + (int)pow(2, i), arr, ind_array);// Слить массив первого потока с массивом второго
+				}
+			}
+#pragma omp barrier
 		}
 	}
-}
 
+	delete[] ind_array;
+}
 void quickSortSearchMin(dot* arr, int startInd, int endInd)
 {
 	if (startInd < endInd)
@@ -166,37 +186,53 @@ void quickSortSearchMin(dot* arr, int startInd, int endInd)
 	}
 }
 
-void quickSortSearchMinPar(dot* arr, int startInd, int endInd)
-{
-	if (startInd < endInd)
-	{
-		dot pivot = arr[startInd];
-		int middleInd = startInd;
-		for (auto i = startInd + 1; i < endInd; i++)
-			if ((arr[i].x < pivot.x) || ((arr[i].x == pivot.x) && (arr[i].y < pivot.y)))
-			{
-				middleInd++;
-				std::swap(arr[middleInd], arr[i]);
-			}
-		std::swap(arr[startInd], arr[middleInd]);
-#pragma omp parallel sections num_threads(2)
-		{
-#pragma omp section
-			quickSortSearchMinPar(arr, startInd, middleInd);
-#pragma omp section
-			quickSortSearchMinPar(arr, middleInd + 1, endInd);
-		}
-	}
-}
-
 void searchMinElement(dot* dotArray, int size)
 {
 	quickSortSearchMin(dotArray, 0, size);
 }
 
-void searchMinElementPar(dot* dotArray, int size)
+void searchMinElementOpenMP(dot* dotArray, int size, int numThreads)
 {
-	quickSortSearchMinPar(dotArray, 0, size);
+	if (size < numThreads * 2) //Если размер массива меньше двойного кол-ва потоков выполняется сортировка всего массива в одном потоке
+	{
+		quickSortSearchMin(dotArray, 0, size);
+		return;
+	}
+	std::pair<int, int>* ind_array = new std::pair<int, int>[numThreads];
+	std::div_t portion = div(size, numThreads); // size / num_threads
+	ind_array[0].first = 0;
+	ind_array[0].second = portion.quot;
+	if (portion.rem > 0)
+		ind_array[0].second++;
+	for (int i = 1; i < numThreads; i++)
+	{
+		ind_array[i].first = ind_array[i - 1].second;
+		ind_array[i].second = ind_array[i].first + portion.quot;
+		if (portion.rem > i)
+			ind_array[i].second++;
+	}//закончено распределение индексов
+
+	int steps_amount = std::ceil(log2(numThreads)); // расчёт необходимого числа шагов в цикле слияний массивов 
+
+#pragma omp parallel
+	{
+		int thread_num = omp_get_thread_num();
+		quickSortSearchMin(dotArray, ind_array[thread_num].first, ind_array[thread_num].second);
+#pragma omp barrier
+		for (int i = 0; i < steps_amount; i++)
+		{
+			if (thread_num % (int)(pow(2, i + 1)) == 0) //Если поток ведущий - сделать слияние с "соседним" потоком
+			{
+				if (thread_num + (int)pow(2, i) < numThreads) // Если поток с которым происходит слияние существует
+				{
+					mergeForMin(thread_num, thread_num + (int)pow(2, i), dotArray, ind_array);// Слить массив первого потока с массивом второго
+				}
+			}
+#pragma omp barrier
+		}
+	}
+
+	delete[] ind_array;
 }
 
 std::pair<std::deque<dot>, int> grehemMethod(dot* dotArray, int size)
@@ -245,14 +281,14 @@ std::pair<std::deque<dot>, int> grehemMethod(dot* dotArray, int size)
 	return std::make_pair(resultArray, resultArray.size());
 }
 
-std::pair<std::deque<dot>, int> grehemMethodOpenMP(dot* dotArray, int size)
+std::pair<std::deque<dot>, int> grehemMethodOpenMP(dot* dotArray, int size, int numThreads)
 {
-	searchMinElementPar(dotArray, size - 1);
+	searchMinElementOpenMP(dotArray, size - 1, numThreads);
 	dot move = dotArray[0];
 #pragma omp parallel for
 	for (auto i = 0; i < size - 1; i++)
 		dotArray[i] = dotArray[i] - move;
-	quickSortPar(dotArray, 1, size - 1);
+	sortParallelOpenMP(dotArray, 1, size - 1, numThreads);
 	dotArray[size - 1] = dotArray[0];
 	std::stack<dot> dotStack;
 	dot dotY, dotX;
@@ -293,7 +329,7 @@ std::pair<std::deque<dot>, int> grehemMethodOpenMP(dot* dotArray, int size)
 
 void sortParallelCppThread(dot* arr, int startInd, int endInd, int numThreads)
 {
-	if (endInd - startInd < numThreads * 2) //���� ������ ������� ������ �������� ���-�� ������� ����������� ���������� ����� ������� � ����� ������
+	if (endInd - startInd < numThreads * 2) //Если размер массива меньше двойного кол-ва потоков выполняется сортировка всего массива в одном потоке
 	{
 		quickSort(arr, startInd, endInd);
 		return;
@@ -310,9 +346,9 @@ void sortParallelCppThread(dot* arr, int startInd, int endInd, int numThreads)
 		ind_array[i].second = ind_array[i].first + portion.quot;
 		if (portion.rem > i)
 			ind_array[i].second++;
-	}//��������� ������������� ��������
+	}//закончено распределение индексов
 
-	int steps_amount = std::ceil(log2(numThreads)); // ������ ������������ ����� ����� � ����� ������� �������� 
+	int steps_amount = std::ceil(log2(numThreads)); // расчёт необходимого числа шагов в цикле слияний массивов 
 
 	std::thread* threadArr = new std::thread[numThreads - 1];
 	for (int i = 1; i < numThreads; i++)
@@ -331,11 +367,11 @@ void sortParallelCppThread(dot* arr, int startInd, int endInd, int numThreads)
 		currentWorkingThreads = 0;
 		for (int thrNum = 0; thrNum < numThreads - 1; thrNum++)
 		{
-			if (thrNum % (int)(pow(2, i + 1)) == 0) //���� ����� ������� - ������� ������� � "��������" �������
+			if (thrNum % (int)(pow(2, i + 1)) == 0) //Если поток ведущий - сделать слияние с "соседним" потоком
 			{
-				if (thrNum + (int)pow(2, i) < numThreads) // ���� ����� � ������� ���������� ������� ����������
+				if (thrNum + (int)pow(2, i) < numThreads) // Если поток с которым происходит слияние существует
 				{
-					threadArr[currentWorkingThreads] = std::thread(merge, thrNum, thrNum + (int)pow(2, i), arr, ind_array);// ����� ������ ������� ������ � �������� �������
+					threadArr[currentWorkingThreads] = std::thread(merge, thrNum, thrNum + (int)pow(2, i), arr, ind_array);// Слить массив первого потока с массивом второго
 					currentWorkingThreads++;
 				}
 			}
@@ -352,7 +388,7 @@ void sortParallelCppThread(dot* arr, int startInd, int endInd, int numThreads)
 
 void searchMinElementCppThread(dot* dotArray, int size, int numThreads)
 {
-	if (size < numThreads * 2) //���� ������ ������� ������ �������� ���-�� ������� ����������� ���������� ����� ������� � ����� ������
+	if (size < numThreads * 2) //Если размер массива меньше двойного кол-ва потоков выполняется сортировка всего массива в одном потоке
 	{
 		quickSortSearchMin(dotArray, 0, size);
 		return;
@@ -369,9 +405,9 @@ void searchMinElementCppThread(dot* dotArray, int size, int numThreads)
 		ind_array[i].second = ind_array[i].first + portion.quot;
 		if (portion.rem > i)
 			ind_array[i].second++;
-	}//��������� ������������� ��������
+	}//закончено распределение индексов
 
-	int steps_amount = std::ceil(log2(numThreads)); // ������ ������������ ����� ����� � ����� ������� �������� 
+	int steps_amount = std::ceil(log2(numThreads)); // расчёт необходимого числа шагов в цикле слияний массивов 
 
 	std::thread* threadArr = new std::thread[numThreads - 1];
 	for (int i = 1; i < numThreads; i++)
@@ -390,11 +426,11 @@ void searchMinElementCppThread(dot* dotArray, int size, int numThreads)
 		currentWorkingThreads = 0;
 		for (int thrNum = 0; thrNum < numThreads - 1; thrNum++)
 		{
-			if (thrNum % (int)(pow(2, i + 1)) == 0) //���� ����� ������� - ������� ������� � "��������" �������
+			if (thrNum % (int)(pow(2, i + 1)) == 0) //Если поток ведущий - сделать слияние с "соседним" потоком
 			{
-				if (thrNum + (int)pow(2, i) < numThreads) // ���� ����� � ������� ���������� ������� ����������
+				if (thrNum + (int)pow(2, i) < numThreads) // Если поток с которым происходит слияние существует
 				{
-					threadArr[currentWorkingThreads] = std::thread(mergeForMin, thrNum, thrNum + (int)pow(2, i), dotArray, ind_array);// ����� ������ ������� ������ � �������� �������
+					threadArr[currentWorkingThreads] = std::thread(mergeForMin, thrNum, thrNum + (int)pow(2, i), dotArray, ind_array);// Слить массив первого потока с массивом второго
 					currentWorkingThreads++;
 				}
 			}
